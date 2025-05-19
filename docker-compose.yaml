@@ -10,8 +10,7 @@ services:
       - '25:25'      # SMTP
       - '465:465'    # SMTPS
       - '587:587'    # SMTP Submission
-    expose:
-      - '5000'
+      - '5000:5000'  # Web Interface
     environment:
       POSTAL_SYSTEM_HOSTNAME: ${POSTAL_DOMAIN}
       POSTAL_SMTP_HOST: ${POSTAL_DOMAIN}
@@ -28,6 +27,9 @@ services:
       POSTAL_WEB_HOST: ${POSTAL_DOMAIN}
       POSTAL_WEB_PROTOCOL: https
       POSTAL_RAILS_SECRET: ${RANDOM_STRING}
+    command: >
+      bash -c "postal initialize &&
+               postal web-server"
     depends_on:
       - postal-rabbitmq
 
@@ -40,6 +42,65 @@ services:
       RABBITMQ_DEFAULT_USER: postal
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
       RABBITMQ_DEFAULT_VHOST: /postal
+
+  postal-smtp:
+    image: ghcr.io/postalserver/postal:latest
+    container_name: postal-smtp
+    restart: always
+    networks:
+      - coolify
+    ports:
+      - '25:25'
+      - '465:465'
+      - '587:587'
+    environment:
+      POSTAL_SYSTEM_HOSTNAME: ${POSTAL_DOMAIN}
+      POSTAL_SMTP_HOST: ${POSTAL_DOMAIN}
+      POSTAL_SMTP_PORT: 25
+      POSTAL_DATABASE_HOST: ${MARIADB_CONTAINER}
+      POSTAL_DATABASE_PORT: ${MARIADB_PORT}
+      POSTAL_DATABASE_NAME: postal
+      POSTAL_DATABASE_USERNAME: ${MARIADB_USER}
+      POSTAL_DATABASE_PASSWORD: ${MARIADB_PASSWORD}
+      POSTAL_RABBITMQ_HOST: postal-rabbitmq
+      POSTAL_RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      POSTAL_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      POSTAL_RABBITMQ_VHOST: /postal
+      POSTAL_WEB_HOST: ${POSTAL_DOMAIN}
+      POSTAL_WEB_PROTOCOL: https
+      POSTAL_RAILS_SECRET: ${RANDOM_STRING}
+    command: postal smtp-server
+    depends_on:
+      - postal
+      - postal-rabbitmq
+
+  postal-worker:
+    image: ghcr.io/postalserver/postal:latest
+    container_name: postal-worker
+    restart: always
+    networks:
+      - coolify
+    environment:
+      POSTAL_SYSTEM_HOSTNAME: ${POSTAL_DOMAIN}
+      POSTAL_SMTP_HOST: ${POSTAL_DOMAIN}
+      POSTAL_SMTP_PORT: 25
+      POSTAL_DATABASE_HOST: ${MARIADB_CONTAINER}
+      POSTAL_DATABASE_PORT: ${MARIADB_PORT}
+      POSTAL_DATABASE_NAME: postal
+      POSTAL_DATABASE_USERNAME: ${MARIADB_USER}
+      POSTAL_DATABASE_PASSWORD: ${MARIADB_PASSWORD}
+      POSTAL_RABBITMQ_HOST: postal-rabbitmq
+      POSTAL_RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      POSTAL_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      POSTAL_RABBITMQ_VHOST: /postal
+      POSTAL_WEB_HOST: ${POSTAL_DOMAIN}
+      POSTAL_WEB_PROTOCOL: https
+      POSTAL_RAILS_SECRET: ${RANDOM_STRING}
+    command: postal worker
+    depends_on:
+      - postal
+      - postal-rabbitmq
+      
 
 networks:
   coolify:
