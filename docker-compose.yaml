@@ -10,7 +10,8 @@ services:
       - '25:25'      # SMTP
       - '465:465'    # SMTPS
       - '587:587'    # SMTP Submission
-      - '5000:5000'  # Web Interface
+    expose:
+      - '5000'
     environment:
       POSTAL_SYSTEM_HOSTNAME: ${POSTAL_DOMAIN}
       POSTAL_SMTP_HOST: ${POSTAL_DOMAIN}
