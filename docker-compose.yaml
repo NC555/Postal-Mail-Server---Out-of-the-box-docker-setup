@@ -7,10 +7,10 @@ services:
     networks:
       - coolify
     ports:
-      - '25:25'      # SMTP
-      - '465:465'    # SMTPS
-      - '587:587'    # SMTP Submission
-      - '5000:5000'  # Web Interface
+      - '25:25'
+      - '465:465'
+      - '587:587'
+      - '5000:5000'
     environment:
       POSTAL_SYSTEM_HOSTNAME: ${POSTAL_DOMAIN}
       POSTAL_SMTP_HOST: ${POSTAL_DOMAIN}
@@ -27,17 +27,54 @@ services:
       POSTAL_WEB_HOST: ${POSTAL_DOMAIN}
       POSTAL_WEB_PROTOCOL: https
       POSTAL_RAILS_SECRET: ${RANDOM_STRING}
-    command: >
-      bash -c "
-      until postal initialize; do
-        echo 'Waiting for database...'
-        sleep 5
-      done &&
-      postal web-server & 
-      postal smtp-server & 
-      postal worker"
+    entrypoint: |
+      bash -c '
+      echo "Waiting for RabbitMQ..."
+      while ! nc -z postal-rabbitmq 5672; do sleep 1; done
+      echo "Waiting for MariaDB..."
+      while ! nc -z ${MARIADB_CONTAINER} ${MARIADB_PORT}; do sleep 1; done
+      echo "Running database initialization..."
+      postal initialize || exit 1
+      echo "Starting web server..."
+      postal web-server'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     depends_on:
       - postal-rabbitmq
+
+  postal-worker:
+    image: ghcr.io/postalserver/postal:latest
+    container_name: postal-worker
+    restart: always
+    networks:
+      - coolify
+    environment:
+      POSTAL_SYSTEM_HOSTNAME: ${POSTAL_DOMAIN}
+      POSTAL_SMTP_HOST: ${POSTAL_DOMAIN}
+      POSTAL_SMTP_PORT: 25
+      POSTAL_DATABASE_HOST: ${MARIADB_CONTAINER}
+      POSTAL_DATABASE_PORT: ${MARIADB_PORT}
+      POSTAL_DATABASE_NAME: postal
+      POSTAL_DATABASE_USERNAME: ${MARIADB_USER}
+      POSTAL_DATABASE_PASSWORD: ${MARIADB_PASSWORD}
+      POSTAL_RABBITMQ_HOST: postal-rabbitmq
+      POSTAL_RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      POSTAL_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      POSTAL_RABBITMQ_VHOST: /postal
+      POSTAL_WEB_HOST: ${POSTAL_DOMAIN}
+      POSTAL_WEB_PROTOCOL: https
+      POSTAL_RAILS_SECRET: ${RANDOM_STRING}
+    entrypoint: |
+      bash -c '
+      echo "Waiting for postal web..."
+      while ! nc -z postal 5000; do sleep 1; done
+      echo "Starting worker..."
+      postal worker'
+    depends_on:
+      - postal
 
   postal-rabbitmq:
     image: rabbitmq:3.8-management
@@ -48,6 +85,11 @@ services:
       RABBITMQ_DEFAULT_USER: postal
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
       RABBITMQ_DEFAULT_VHOST: /postal
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   coolify:
