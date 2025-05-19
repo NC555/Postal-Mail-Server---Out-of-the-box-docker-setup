@@ -5,17 +5,18 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: postal
+    ports:
+      - "5000:5000"  # Port for web-server; adjust if needed
     networks:
       - coolify
     environment:
-      DB_HOST: '${MARIADB_CONTAINER}'  
+      DB_HOST: '${MARIADB_CONTAINER}'
       DB_USER: '${MARIADB_USER}'
       DB_PASS: '${MARIADB_PASSWORD}'
       DB_NAME: postal
     volumes:
       - postal-data:/opt/postal/config
-    ports:
-      - "5000:5000"
+    command: ["postal", "web-server"]  # Ensure the correct component is specified here
 
 networks:
   coolify:
