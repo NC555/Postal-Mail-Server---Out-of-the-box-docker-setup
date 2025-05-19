@@ -12,7 +12,7 @@ services:
       - '587:587'
       - '5000:5000'
     volumes:
-      - data/postal/postal.yml:/config/postal.yml
+      - /data/postal/postal.yml:/config/postal.yml
       - postal_data:/opt/postal/storage 
     environment:
       POSTAL_SYSTEM_HOSTNAME: ${POSTAL_DOMAIN}
