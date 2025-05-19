@@ -8,7 +8,7 @@ services:
     networks:
       - coolify
     environment:
-      DB_HOST: '${MARIADB_CONTAINER}'
+      DB_HOST: '${MARIADB_CONTAINER}'  
       DB_USER: '${MARIADB_USER}'
       DB_PASS: '${MARIADB_PASSWORD}'
       DB_NAME: postal
@@ -16,8 +16,6 @@ services:
       - postal-data:/opt/postal/config
     ports:
       - "5000:5000"
-    depends_on:
-      - mariadb
 
 networks:
   coolify:
