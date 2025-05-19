@@ -11,7 +11,7 @@ services:
       - '465:465'
       - '587:587'
       - '5000:5000'
-    volume:
+    volumes:
       - data/postal/postal.yml:/config/postal.yml
       - postal_data:/opt/postal/storage 
     environment:
