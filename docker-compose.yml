@@ -2,8 +2,8 @@ version: '3.7'
 services:
   postal:
     build:
-      context: . 
-      dockerfile: Dockerfile  
+      context: .
+      dockerfile: Dockerfile
     container_name: postal
     networks:
       - coolify
@@ -25,5 +25,3 @@ networks:
 
 volumes:
   postal-data:
-
-
