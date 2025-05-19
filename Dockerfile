@@ -1,24 +1,20 @@
-# Use the postalserver.io as the base image
+# Use the postalserver.io base image
 FROM ghcr.io/postalserver/postal:latest
 
 # Update the package manager and install zsh and nano
-RUN apt-get update && apt-get install -y \
-    zsh \
-    nano \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+  && apt-get install -y zsh nano \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
 
-# Switch the default shell to zsh for the root user
+# Set zsh as the default shell
 RUN chsh -s $(which zsh) root
 
-# If Postal uses a specific user, set zsh as default for that user as well
+# Assign zsh as the default shell for the postal user if it exists
 RUN usermod --shell $(which zsh) postal
 
-# Optionally set up zsh configuration, such as oh-my-zsh, if desired
-# RUN sh -c "$(wget https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh -O -)"
-
-# Expose necessary ports
+# Expose Postal port
 EXPOSE 5000
 
-# Run the Postal command (adjust if necessary)
+# Define the default command
 CMD ["postal", "start"]
