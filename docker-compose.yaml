@@ -1,28 +1,45 @@
-version: '3.7'
+version: '3'
 services:
   postal:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/postalserver/postal:latest
     container_name: postal
+    restart: always
+    networks:
+      - coolify
     ports:
-      - "5000:5000"  # Port for web-server; adjust if needed
+      - '25:25'      # SMTP
+      - '465:465'    # SMTPS
+      - '587:587'    # SMTP Submission
+      - '5000:5000'  # Web Interface
+    environment:
+      - POSTAL_SYSTEM_HOSTNAME='${POSTAL_DOMAIN}'
+      - POSTAL_SMTP_HOST='${POSTAL_DOMAIN}'
+      - POSTAL_SMTP_PORT=25
+      - POSTAL_DATABASE_HOST='${MARIADB_CONTAINER}'
+      - POSTAL_DATABASE_PORT='${MARIADB_PORT}'
+      - POSTAL_DATABASE_NAME=postal
+      - POSTAL_DATABASE_USERNAME='${MARIADB_USER}'
+      - POSTAL_DATABASE_PASSWORD='${MARIADB_PASSWORD}'
+      - POSTAL_RABBITMQ_HOST=postal-rabbitmq
+      - POSTAL_RABBITMQ_USERNAME='${RABBITMQ_USER}'
+      - POSTAL_RABBITMQ_PASSWORD='${RABBITMQ_PASSWORD}'
+      - POSTAL_RABBITMQ_VHOST=/postal
+      - POSTAL_WEB_HOST='${POSTAL_DOMAIN}'
+      - POSTAL_WEB_PROTOCOL=https
+      - POSTAL_RAILS_SECRET='${RANDOM_STRING}'
+    depends_on:
+      - postal-rabbitmq
+
+  postal-rabbitmq:
+    image: rabbitmq:3.8-management
+    container_name: postal-rabbitmq
     networks:
       - coolify
     environment:
-      DB_HOST: '${MARIADB_CONTAINER}'
-      DB_PORT: '${MARIADB_PORT}'
-      DB_USER: '${MARIADB_USER}'
-      DB_PASS: '${MARIADB_PASSWORD}'
-      DB_NAME: postal
-    volumes:
-      - /data/postal/postal.yml:/config/postal.yml  # user confif file
-      - postal-data:/opt/postal/config
-    command: ["postal", "web-server"]  # Ensure the correct component is specified here
+      - RABBITMQ_DEFAULT_USER=postal
+      - RABBITMQ_DEFAULT_PASS='${RABBITMQ_PASSWORD}'
+      - RABBITMQ_DEFAULT_VHOST=/postal
 
 networks:
   coolify:
     external: true
-
-volumes:
-  postal-data:
