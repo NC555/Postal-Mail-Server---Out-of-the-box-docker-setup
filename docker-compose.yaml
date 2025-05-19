@@ -11,6 +11,9 @@ services:
       - '465:465'
       - '587:587'
       - '5000:5000'
+    volume:
+      - data/postal/postal.yml:/config/postal.yml
+      - postal_data:/opt/postal/storage 
     environment:
       POSTAL_SYSTEM_HOSTNAME: ${POSTAL_DOMAIN}
       POSTAL_SMTP_HOST: ${POSTAL_DOMAIN}
@@ -44,6 +47,7 @@ services:
       retries: 3
     depends_on:
       - postal-rabbitmq
+  
 
   postal-worker:
     image: ghcr.io/postalserver/postal:latest
@@ -81,6 +85,8 @@ services:
     container_name: postal-rabbitmq
     networks:
       - coolify
+    volumes:
+      - postal_rabbitmq_data:/var/lib/rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: postal
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
@@ -94,3 +100,8 @@ services:
 networks:
   coolify:
     external: true
+    
+volumes:
+  postal_config:
+  postal_data:
+  postal_rabbitmq_data:
