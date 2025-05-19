@@ -16,6 +16,7 @@ services:
       DB_PASS: '${MARIADB_PASSWORD}'
       DB_NAME: postal
     volumes:
+      - ./data/postal/postal.yml:/config/postal.yml  # user confif file
       - postal-data:/opt/postal/config
     command: ["postal", "web-server"]  # Ensure the correct component is specified here
 
