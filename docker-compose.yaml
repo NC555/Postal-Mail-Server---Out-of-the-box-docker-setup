@@ -28,75 +28,30 @@ services:
       POSTAL_RABBITMQ_PASSWORD: ${POSTAL_RABBITMQ_PASSWORD}
       POSTAL_RABBITMQ_VHOST: /postal
       RAILS_SECRET_KEY: ${RAILS_SECRET_KEY}
-
       POSTAL_SMTP_PORT: 25
-      working_dir: /opt/postal/app # Set working directory for bundle exec
+      RAILS_ENV: production
       entrypoint: |
         bash -c '
-        set -ex # Exit on error, print commands for debugging
-  
-        echo "SCRIPT: Starting entrypoint script..."
-  
-        echo "SCRIPT: Waiting for RabbitMQ (postal-rabbitmq-xko0wc0kg0c44ggg88cg0ck4:5672)..."
-        while ! nc -z postal-rabbitmq-xko0wc0kg0c44ggg88cg0ck4 5672; do
-          echo "SCRIPT: Still waiting for RabbitMQ...";
-          sleep 1;
+        set -e
+        
+        # Wait for dependencies
+        until nc -z postal-rabbitmq-xko0wc0kg0c44ggg88cg0ck4 5672; do
+          echo "Waiting for RabbitMQ..."
+          sleep 2
         done
-        echo "SCRIPT: RabbitMQ is up."
-  
-        echo "SCRIPT: Waiting for MariaDB (maria-db-server-kgws4w40k48ogswo80gsoos0:3306)..."
-        while ! nc -z maria-db-server-kgws4w40k48ogswo80gsoos0 3306; do
-          echo "SCRIPT: Still waiting for MariaDB...";
-          sleep 1;
+        
+        until nc -z maria-db-server-kgws4w40k48ogswo80gsoos0 3306; do
+          echo "Waiting for MariaDB..."
+          sleep 2
         done
-        echo "SCRIPT: MariaDB is up."
-  
-        POSTAL_APP_DIR="/opt/postal/app"
-  
-        echo "SCRIPT: Checking for /config/postal.yml..."
-        if [ -f /config/postal.yml ]; then
-          echo "SCRIPT: INFO: Found /config/postal.yml. Settings from this file will take precedence."
-          echo "SCRIPT: --- Begin /config/postal.yml content ---"
-          cat /config/postal.yml
-          echo "SCRIPT: --- End /config/postal.yml content ---"
-        else
-          echo "SCRIPT: INFO: No /config/postal.yml found. Using environment variables."
-        fi
-  
-        PUMA_CONFIG_FILE="${POSTAL_APP_DIR}/config/puma.rb"
-        echo "SCRIPT: Checking for Puma configuration at ${PUMA_CONFIG_FILE}..."
-        if [ -f "${PUMA_CONFIG_FILE}" ]; then
-          echo "SCRIPT: INFO: Found ${PUMA_CONFIG_FILE}."
-          echo "SCRIPT: --- Begin ${PUMA_CONFIG_FILE} content ---"
-          cat "${PUMA_CONFIG_FILE}"
-          echo "SCRIPT: --- End ${PUMA_CONFIG_FILE} content ---"
-        else
-          echo "SCRIPT: INFO: No Puma configuration found at ${PUMA_CONFIG_FILE}."
-        fi
-  
-        echo "SCRIPT: Attempting to run postal initialize..."
-        # Ensure we are in a context where postal command is available, or use full path if necessary
-        cd /opt/postal/app && bundle exec /opt/postal/bin/postal initialize
-        INITIALIZE_EXIT_CODE=$?
-        echo "SCRIPT: postal initialize finished with exit code: \"${INITIALIZE_EXIT_CODE}\""
-  
-        if [ "${INITIALIZE_EXIT_CODE}" -ne 0 ]; then
-          echo "SCRIPT: ERROR: postal initialize failed with exit code \"${INITIALIZE_EXIT_CODE}\". Exiting."
-          exit 1
-        fi
-  
-        echo "SCRIPT: Attempting to start web server directly with Puma:"
-        echo "SCRIPT: bundle exec puma -e production -b tcp://0.0.0.0:5000"
         
-        # Change to the Rails app directory before running bundle exec puma
-        cd "${POSTAL_APP_DIR}"
+        cd /opt/postal/app
         
-        # If a puma.rb exists and configures binding, this explicit -b might override it or conflict.
-        # If it does not exist, this -b is essential.
-        exec bundle exec puma -e production -b tcp://0.0.0.0:5000
+        # Initialize if needed
+        bundle exec postal initialize || true
         
-        echo "SCRIPT: ERROR: exec bundle exec puma seems to have exited or failed to launch."
-        exit 1 
+        # Start the web server
+        exec bundle exec puma -C config/puma.rb -e production
         '
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000"]
