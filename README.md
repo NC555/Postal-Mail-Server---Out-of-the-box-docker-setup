@@ -25,16 +25,16 @@ track     CNAME → postal.yourdomain.com
 ```
 
 ## 2. Environment Variables
-Create a `.env` file with these variables:
+Create a `/data/postal/postal.yml` file with these variables:
 ```env
-POSTAL_DOMAIN=postal.yourdomain.com
-MARIADB_CONTAINER=your-mariadb-container-name
-MARIADB_PORT=3306
-MARIADB_USER=postal
-MARIADB_PASSWORD=your-secure-password
-RABBITMQ_USER=postal
-RABBITMQ_PASSWORD=your-secure-rabbitmq-password
-RANDOM_STRING=generate-a-random-string-here
+POSTAL_DOMAIN: postal.yourdomain.com
+MARIADB_CONTAINER: your-maria-db-container
+MARIADB_PORT: 3306 
+MARIADB_USER: your-maria-db-user
+MARIADB_PASSWORD: your-mariadb-pass
+RABBITMQ_USER: your-rabbit-mq-user
+RABBITMQ_PASSWORD:your-rabbit-mq-pass
+RANDOM_STRING: random-string
 ```
 
 ## 3. Database Setup
