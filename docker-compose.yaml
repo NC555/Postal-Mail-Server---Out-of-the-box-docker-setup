@@ -56,7 +56,7 @@ services:
       if [ -f /config/postal.yml ]; then
         echo "SCRIPT: INFO: Found /config/postal.yml. Settings from this file will take precedence."
         echo "SCRIPT: --- Begin /config/postal.yml content ---"
-        cat /config/postal.yml # Print the config file content to logs
+        cat /config/postal.yml
         echo "SCRIPT: --- End /config/postal.yml content ---"
       else
         echo "SCRIPT: INFO: No /config/postal.yml found. Using environment variables."
@@ -64,21 +64,21 @@ services:
 
       echo "SCRIPT: Attempting to run postal initialize..."
       postal initialize
-      INITIALIZE_EXIT_CODE=$? # Capture the exit code
-      echo "SCRIPT: postal initialize finished with exit code $INITIALIZE_EXIT_CODE."
+      INITIALIZE_EXIT_CODE=$?
+      echo "SCRIPT: postal initialize finished with exit code $INITIALIZE_EXIT_CODE." # Corrected echo
 
-      if [ $INITIALIZE_EXIT_CODE -ne 0 ]; then
+      if [ "$INITIALIZE_EXIT_CODE" -ne 0 ]; then # Added quotes for robustness
         echo "SCRIPT: ERROR: postal initialize failed with exit code $INITIALIZE_EXIT_CODE. Exiting."
         exit 1
       fi
 
-      echo "SCRIPT: Attempting to start web server with: exec postal web-server"
-      # The "exec" command replaces the current shell process with the postal web-server process.
-      # If this works, you should see Puma startup messages after this line.
-      exec postal web-server
+      echo "SCRIPT: Attempting to start web server with: exec env HOST='0.0.0.0' postal web-server"
+      # Try setting HOST environment variable for Puma, which it often respects for binding.
+      # PORT is usually picked up from postal.yml web.port or defaults.
+      exec env HOST='0.0.0.0' postal web-server
       
-      # The lines below should NOT be reached if "exec postal web-server" is successful.
-      echo "SCRIPT: ERROR: exec postal web-server seems to have exited or failed to launch. This should not happen."
+      # This part should not be reached if exec is successful
+      echo "SCRIPT: ERROR: exec postal web-server seems to have exited or failed to launch."
       exit 1 
       '
     healthcheck:
