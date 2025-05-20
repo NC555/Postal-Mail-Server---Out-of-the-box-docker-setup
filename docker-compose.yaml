@@ -30,7 +30,7 @@ services:
       POSTAL_RABBITMQ_USERNAME: ${RABBITMQ_USER} 
       POSTAL_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD} 
       POSTAL_RABBITMQ_VHOST: /postal
-      RAILS_SECRET_KEY: ${RANDOM_STRING} # Official name
+      RAILS_SECRET_KEY: ${RANDOM_STRING} 
       POSTAL_SMTP_PORT: 25 
                       
 
@@ -129,6 +129,5 @@ networks:
     external: true
 
 volumes:
-  # postal_config: # This named volume is not used if you map a host path for postal.yml
   postal_data:
   postal_rabbitmq_data:
