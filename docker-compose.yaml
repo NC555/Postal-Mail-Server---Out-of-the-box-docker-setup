@@ -1,9 +1,8 @@
 version: '3'
-
 services:
   postal:
     image: ghcr.io/postalserver/postal:latest
-    container_name: postal
+    container_name: postal-xko0wc0kg0c44ggg88cg0ck4
     restart: always
     networks:
       - coolify
@@ -13,42 +12,45 @@ services:
       - '587:587'
       - '5000:5000'
     volumes:
-
       - /data/postal/postal.yml:/config/postal.yml
-      - postal_data:/opt/postal/storage 
+      - postal_data:/opt/postal/storage
     environment:
-      # General Postal Settings
-      POSTAL_WEB_HOSTNAME: ${POSTAL_WEB_HOSTNAME} 
+      POSTAL_WEB_HOSTNAME: mail.nc555.online
       POSTAL_WEB_PROTOCOL: https
-      POSTAL_SMTP_HOSTNAME: ${POSTAL_SMTP_HOSTNAME} 
-      MAIN_DB_HOST: ${MAIN_DB_HOST}
-      MAIN_DB_PORT: ${MAIN_DB_PORT} 
+      POSTAL_SMTP_HOSTNAME: mail.nc555.online
+      MAIN_DB_HOST: maria-db-server-kgws4w40k48ogswo80gsoos0
+      MAIN_DB_PORT: 3306
       MAIN_DB_DATABASE: postal
-      MAIN_DB_USERNAME: ${MAIN_DB_USERNAME}
-      MAIN_DB_PASSWORD: ${MAIN_DB_PASSWORD}
-      POSTAL_RABBITMQ_HOST: postal-rabbitmq
-      POSTAL_RABBITMQ_USERNAME: ${POSTAL_RABBITMQ_USERNAME} 
-      POSTAL_RABBITMQ_PASSWORD: ${POSTAL_RABBITMQ_PASSWORD} 
+      MAIN_DB_USERNAME: root
+      MAIN_DB_PASSWORD: 'UN!CHRoogLYGmyv9iRJ!eRmtF*uQ78'
+      POSTAL_RABBITMQ_HOST: postal-rabbitmq-xko0wc0kg0c44ggg88cg0ck4
+      POSTAL_RABBITMQ_USERNAME: admin
+      POSTAL_RABBITMQ_PASSWORD: 'UN!CHRoogLYGmyv9iRJ!eRmtF*uQ78'
       POSTAL_RABBITMQ_VHOST: /postal
-      RAILS_SECRET_KEY: ${RAILS_SECRET_KEY} 
-      POSTAL_SMTP_PORT: 25 
-                      
-
     entrypoint: |
       bash -c '
       echo "Waiting for RabbitMQ..."
-      while ! nc -z postal-rabbitmq 5672; do sleep 1; done
+      while ! nc -z postal-rabbitmq-xko0wc0kg0c44ggg88cg0ck4 5672; do 
+        echo "Waiting for RabbitMQ..."; 
+        sleep 1; 
+      done
+      
       echo "Waiting for MariaDB..."
-      while ! nc -z ${MARIADB_CONTAINER} ${MARIADB_PORT}; do sleep 1; done # MARIADB_PORT should be 3306
+      while ! nc -z maria-db-server-kgws4w40k48ogswo80gsoos0 3306; do 
+        echo "Waiting for MariaDB..."; 
+        sleep 1; 
+      done
+      
       echo "Running database initialization..."
       if [ -f /config/postal.yml ]; then
-        echo "INFO: Found /config/postal.yml. Settings from this file will take precedence over environment variables for conflicting keys."
+        echo "INFO: Found /config/postal.yml. Settings from this file will take precedence."
       else
-        echo "INFO: No /config/postal.yml found. Relying on environment variables for configuration."
+        echo "INFO: No /config/postal.yml found. Using environment variables."
       fi
+      
       postal initialize || exit 1
       echo "Starting web server..."
-      postal web-server'
+      postal web-server --bind-address=0.0.0.0'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000"]
       interval: 30s
