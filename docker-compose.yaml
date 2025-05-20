@@ -52,6 +52,8 @@ services:
       done
       echo "SCRIPT: MariaDB is up."
 
+      POSTAL_APP_DIR="/opt/postal/app" # Assuming this is the Rails app root
+
       echo "SCRIPT: Checking for /config/postal.yml..."
       if [ -f /config/postal.yml ]; then
         echo "SCRIPT: INFO: Found /config/postal.yml. Settings from this file will take precedence."
@@ -62,22 +64,30 @@ services:
         echo "SCRIPT: INFO: No /config/postal.yml found. Using environment variables."
       fi
 
+      echo "SCRIPT: Checking for Puma configuration at ${POSTAL_APP_DIR}/config/puma.rb..."
+      if [ -f "${POSTAL_APP_DIR}/config/puma.rb" ]; then
+        echo "SCRIPT: INFO: Found ${POSTAL_APP_DIR}/config/puma.rb."
+        echo "SCRIPT: --- Begin ${POSTAL_APP_DIR}/config/puma.rb content ---"
+        cat "${POSTAL_APP_DIR}/config/puma.rb"
+        echo "SCRIPT: --- End ${POSTAL_APP_DIR}/config/puma.rb content ---"
+      else
+        echo "SCRIPT: INFO: No Puma configuration found at ${POSTAL_APP_DIR}/config/puma.rb."
+      fi
+
       echo "SCRIPT: Attempting to run postal initialize..."
       postal initialize
       INITIALIZE_EXIT_CODE=$?
-      echo "SCRIPT: postal initialize finished with exit code $INITIALIZE_EXIT_CODE." # Corrected echo
+      echo "SCRIPT: postal initialize finished with exit code: ${INITIALIZE_EXIT_CODE}" # Corrected echo
 
-      if [ "$INITIALIZE_EXIT_CODE" -ne 0 ]; then # Added quotes for robustness
-        echo "SCRIPT: ERROR: postal initialize failed with exit code $INITIALIZE_EXIT_CODE. Exiting."
+      if [ "${INITIALIZE_EXIT_CODE}" -ne 0 ]; then # Corrected variable check
+        echo "SCRIPT: ERROR: postal initialize failed with exit code ${INITIALIZE_EXIT_CODE}. Exiting."
         exit 1
       fi
 
-      echo "SCRIPT: Attempting to start web server with: exec env HOST='0.0.0.0' postal web-server"
-      # Try setting HOST environment variable for Puma, which it often respects for binding.
-      # PORT is usually picked up from postal.yml web.port or defaults.
-      exec env HOST='0.0.0.0' postal web-server
+      echo "SCRIPT: Attempting to start web server with: exec env HOST='0.0.0.0' PORT='5000' postal web-server"
+      # Setting HOST and PORT environment variables for Puma
+      exec env HOST='0.0.0.0' PORT='5000' postal web-server
       
-      # This part should not be reached if exec is successful
       echo "SCRIPT: ERROR: exec postal web-server seems to have exited or failed to launch."
       exit 1 
       '
