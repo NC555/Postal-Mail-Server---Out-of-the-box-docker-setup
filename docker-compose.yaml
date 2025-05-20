@@ -30,8 +30,6 @@ services:
       RAILS_SECRET_KEY: ${RAILS_SECRET_KEY}
 
       POSTAL_SMTP_PORT: 25
-
-      
     entrypoint: |
       bash -c '
       set -ex # Exit on error, print commands for debugging
@@ -52,7 +50,7 @@ services:
       done
       echo "SCRIPT: MariaDB is up."
 
-      POSTAL_APP_DIR="/opt/postal/app" # Assuming this is the Rails app root
+      POSTAL_APP_DIR="/opt/postal/app" # Postal application directory
 
       echo "SCRIPT: Checking for /config/postal.yml..."
       if [ -f /config/postal.yml ]; then
@@ -77,16 +75,17 @@ services:
       echo "SCRIPT: Attempting to run postal initialize..."
       postal initialize
       INITIALIZE_EXIT_CODE=$?
-      echo "SCRIPT: postal initialize finished with exit code: ${INITIALIZE_EXIT_CODE}" # Corrected echo
+      # Correctly echo the exit code, ensuring it's treated as a string if it's 0
+      echo "SCRIPT: postal initialize finished with exit code: \"${INITIALIZE_EXIT_CODE}\""
 
-      if [ "${INITIALIZE_EXIT_CODE}" -ne 0 ]; then # Corrected variable check
-        echo "SCRIPT: ERROR: postal initialize failed with exit code ${INITIALIZE_EXIT_CODE}. Exiting."
+      if [ "${INITIALIZE_EXIT_CODE}" -ne 0 ]; then
+        echo "SCRIPT: ERROR: postal initialize failed with exit code \"${INITIALIZE_EXIT_CODE}\". Exiting."
         exit 1
       fi
 
-      echo "SCRIPT: Attempting to start web server with: exec env HOST='0.0.0.0' PORT='5000' postal web-server"
-      # Setting HOST and PORT environment variables for Puma
-      exec env HOST='0.0.0.0' PORT='5000' postal web-server
+      echo "SCRIPT: Attempting to start web server with: exec env PUMA_DEFAULT_HOST='0.0.0.0' HOST='0.0.0.0' PORT='5000' postal web-server"
+      # Adding PUMA_DEFAULT_HOST as another attempt, along with HOST and PORT
+      exec env PUMA_DEFAULT_HOST='0.0.0.0' HOST='0.0.0.0' PORT='5000' postal web-server
       
       echo "SCRIPT: ERROR: exec postal web-server seems to have exited or failed to launch."
       exit 1 
