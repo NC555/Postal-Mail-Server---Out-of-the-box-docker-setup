@@ -50,6 +50,7 @@ FLUSH PRIVILEGES;
 Docker compose file (as provided in your setup):
 ```yaml
 version: '3'
+
 services:
   postal:
     image: ghcr.io/postalserver/postal:latest
@@ -58,42 +59,147 @@ services:
     networks:
       - coolify
     ports:
-      - '25:25'      # SMTP
-      - '465:465'    # SMTPS
-      - '587:587'    # SMTP Submission
-      - '5000:5000'  # Web Interface
+      - '25:25'
+      - '465:465'
+      - '587:587'
+      - '5000:5000'
+    volumes:
+      # If /data/postal/postal.yml exists and is configured, it will override ENV vars for DB etc.
+      # Ensure it's correctly configured or remove this line to rely solely on ENV vars.
+      - /data/postal/postal.yml:/config/postal.yml
+      - postal_data:/opt/postal/storage # For persistent mail data
     environment:
-      - POSTAL_SYSTEM_HOSTNAME='${POSTAL_DOMAIN}'
-      - POSTAL_SMTP_HOST='${POSTAL_DOMAIN}'
-      - POSTAL_SMTP_PORT=25
-      - POSTAL_DATABASE_HOST='${MARIADB_CONTAINER}'
-      - POSTAL_DATABASE_PORT='${MARIADB_PORT}'
-      - POSTAL_DATABASE_NAME=postal
-      - POSTAL_DATABASE_USERNAME='${MARIADB_USER}'
-      - POSTAL_DATABASE_PASSWORD='${MARIADB_PASSWORD}'
-      - POSTAL_RABBITMQ_HOST=postal-rabbitmq
-      - POSTAL_RABBITMQ_USERNAME='${RABBITMQ_USER}'
-      - POSTAL_RABBITMQ_PASSWORD='${RABBITMQ_PASSWORD}'
-      - POSTAL_RABBITMQ_VHOST=/postal
-      - POSTAL_WEB_HOST='${POSTAL_DOMAIN}'
-      - POSTAL_WEB_PROTOCOL=https
-      - POSTAL_RAILS_SECRET='${RANDOM_STRING}'
+      # General Postal Settings
+      POSTAL_WEB_HOSTNAME: ${POSTAL_DOMAIN} # Official name
+      POSTAL_WEB_PROTOCOL: https
+      POSTAL_SMTP_HOSTNAME: ${POSTAL_DOMAIN} # Official name
+      # POSTAL_SYSTEM_HOSTNAME: ${POSTAL_DOMAIN} # This was used before, POSTAL_WEB_HOSTNAME and POSTAL_SMTP_HOSTNAME are more specific from the list.
+                                                # Postal's internal scripts might use one to derive others if not all are set.
+                                                # Keeping POSTAL_WEB_HOSTNAME and POSTAL_SMTP_HOSTNAME as per official list.
+
+      # Database Connection - Using official MAIN_DB_* prefixes
+      MAIN_DB_HOST: ${MARIADB_CONTAINER}
+      MAIN_DB_PORT: ${MARIADB_PORT} # CRITICAL: Ensure this is 3306 in your .env file
+      MAIN_DB_DATABASE: postal
+      MAIN_DB_USERNAME: ${MARIADB_USER}
+      MAIN_DB_PASSWORD: ${MARIADB_PASSWORD}
+      # MAIN_DB_POOL_SIZE: 5 # Optional: as per official list default
+      # MAIN_DB_ENCODING: utf8mb4 # Optional: as per official list default
+
+      # RabbitMQ Connection (Assuming these POSTAL_ prefixed vars are handled by Postal's image scripts)
+      # The official list doesn't explicitly state how Postal consumes these for its connection TO RabbitMQ.
+      # If issues persist, these might need to be mapped to different underlying library variables if Postal doesn't translate them.
+      POSTAL_RABBITMQ_HOST: postal-rabbitmq
+      POSTAL_RABBITMQ_USERNAME: ${RABBITMQ_USER} # Note: RabbitMQ service uses RABBITMQ_DEFAULT_USER
+      POSTAL_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD} # Note: RabbitMQ service uses RABBITMQ_DEFAULT_PASS
+      POSTAL_RABBITMQ_VHOST: /postal
+
+      # Rails Secret Key
+      RAILS_SECRET_KEY: ${RANDOM_STRING} # Official name
+
+      # Other settings from your previous compose (review if needed against official list)
+      POSTAL_SMTP_PORT: 25 # This refers to the port Postal's SMTP server listens on, not an outbound SMTP relay.
+                           # Official list has SMTP_SERVER_DEFAULT_PORT which defaults to 25.
+
+    entrypoint: |
+      bash -c '
+      echo "Waiting for RabbitMQ..."
+      while ! nc -z postal-rabbitmq 5672; do sleep 1; done
+      echo "Waiting for MariaDB..."
+      while ! nc -z ${MARIADB_CONTAINER} ${MARIADB_PORT}; do sleep 1; done # MARIADB_PORT should be 3306
+      echo "Running database initialization..."
+      if [ -f /config/postal.yml ]; then
+        echo "INFO: Found /config/postal.yml. Settings from this file will take precedence over environment variables for conflicting keys."
+      else
+        echo "INFO: No /config/postal.yml found. Relying on environment variables for configuration."
+      fi
+      postal initialize || exit 1
+      echo "Starting web server..."
+      postal web-server'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     depends_on:
       - postal-rabbitmq
 
+  postal-worker:
+    image: ghcr.io/postalserver/postal:latest
+    container_name: postal-worker
+    restart: always
+    networks:
+      - coolify
+    volumes: # Worker might also benefit from postal.yml if it needs shared config
+      - /data/postal/postal.yml:/config/postal.yml
+    environment:
+      # General Postal Settings
+      POSTAL_WEB_HOSTNAME: ${POSTAL_DOMAIN}
+      POSTAL_WEB_PROTOCOL: https
+      POSTAL_SMTP_HOSTNAME: ${POSTAL_DOMAIN}
+
+      # Database Connection - Using official MAIN_DB_* prefixes
+      MAIN_DB_HOST: ${MARIADB_CONTAINER}
+      MAIN_DB_PORT: ${MARIADB_PORT} # CRITICAL: Ensure this is 3306 in your .env file
+      MAIN_DB_DATABASE: postal
+      MAIN_DB_USERNAME: ${MARIADB_USER}
+      MAIN_DB_PASSWORD: ${MARIADB_PASSWORD}
+
+      # RabbitMQ Connection
+      POSTAL_RABBITMQ_HOST: postal-rabbitmq
+      POSTAL_RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      POSTAL_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      POSTAL_RABBITMQ_VHOST: /postal
+
+      # Rails Secret Key
+      RAILS_SECRET_KEY: ${RANDOM_STRING}
+
+      POSTAL_SMTP_PORT: 25
+
+    entrypoint: |
+      bash -c '
+      echo "Waiting for postal web (main postal service)..."
+      while ! nc -z postal 5000; do sleep 1; done
+      echo "Waiting for RabbitMQ..."
+      while ! nc -z postal-rabbitmq 5672; do sleep 1; done
+      echo "Waiting for MariaDB..."
+      while ! nc -z ${MARIADB_CONTAINER} ${MARIADB_PORT}; do sleep 1; done # MARIADB_PORT should be 3306
+      if [ -f /config/postal.yml ]; then
+        echo "INFO (worker): Found /config/postal.yml."
+      else
+        echo "INFO (worker): No /config/postal.yml found. Relying on environment variables."
+      fi
+      echo "Starting worker..."
+      postal worker'
+    depends_on:
+      - postal # Depends on the main postal service to be somewhat up
+      - postal-rabbitmq # Also directly depends on rabbitmq
+
   postal-rabbitmq:
-    image: rabbitmq:3.8-management
+    image: rabbitmq:3.8-management # Consider updating to a more recent RabbitMQ version if compatible
     container_name: postal-rabbitmq
     networks:
       - coolify
+    volumes:
+      - postal_rabbitmq_data:/var/lib/rabbitmq
     environment:
-      - RABBITMQ_DEFAULT_USER=postal
-      - RABBITMQ_DEFAULT_PASS='${RABBITMQ_PASSWORD}'
-      - RABBITMQ_DEFAULT_VHOST=/postal
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER} # Use the var from .env
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD} # Use the var from .env
+      RABBITMQ_DEFAULT_VHOST: /postal # Postal expects this vhost
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   coolify:
     external: true
+
+volumes:
+  # postal_config: # This named volume is not used if you map a host path for postal.yml
+  postal_data:
+  postal_rabbitmq_data:
 ```
 
 ## 5. Nginx Proxy Manager Setup
