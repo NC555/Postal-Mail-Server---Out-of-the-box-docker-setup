@@ -15,18 +15,23 @@ services:
       - /data/postal/postal.yml:/config/postal.yml
       - postal_data:/opt/postal/storage
     environment:
-      POSTAL_WEB_HOSTNAME: mail.nc555.online
+      POSTAL_WEB_HOSTNAME: ${POSTAL_WEB_HOSTNAME}
       POSTAL_WEB_PROTOCOL: https
-      POSTAL_SMTP_HOSTNAME: mail.nc555.online
-      MAIN_DB_HOST: maria-db-server-kgws4w40k48ogswo80gsoos0
-      MAIN_DB_PORT: 3306
+      POSTAL_SMTP_HOSTNAME: ${POSTAL_SMTP_HOSTNAME}
+      MAIN_DB_HOST: ${MAIN_DB_HOST}
+      MAIN_DB_PORT: ${MAIN_DB_PORT} 
       MAIN_DB_DATABASE: postal
-      MAIN_DB_USERNAME: root
-      MAIN_DB_PASSWORD: 'UN!CHRoogLYGmyv9iRJ!eRmtF*uQ78'
-      POSTAL_RABBITMQ_HOST: postal-rabbitmq-xko0wc0kg0c44ggg88cg0ck4
-      POSTAL_RABBITMQ_USERNAME: admin
-      POSTAL_RABBITMQ_PASSWORD: 'UN!CHRoogLYGmyv9iRJ!eRmtF*uQ78'
+      MAIN_DB_USERNAME: ${MAIN_DB_USERNAME}
+      MAIN_DB_PASSWORD: ${MAIN_DB_PASSWORD}
+      POSTAL_RABBITMQ_HOST: postal-rabbitmq
+      POSTAL_RABBITMQ_USERNAME: ${POSTAL_RABBITMQ_USERNAME}
+      POSTAL_RABBITMQ_PASSWORD: ${POSTAL_RABBITMQ_PASSWORD}
       POSTAL_RABBITMQ_VHOST: /postal
+      RAILS_SECRET_KEY: ${RAILS_SECRET_KEY}
+
+      POSTAL_SMTP_PORT: 25
+
+      
     entrypoint: |
       bash -c '
       set -ex # Exit on error, print commands for debugging
