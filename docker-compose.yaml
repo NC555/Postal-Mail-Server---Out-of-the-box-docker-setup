@@ -27,30 +27,55 @@ services:
       POSTAL_RABBITMQ_USERNAME: admin
       POSTAL_RABBITMQ_PASSWORD: 'UN!CHRoogLYGmyv9iRJ!eRmtF*uQ78'
       POSTAL_RABBITMQ_VHOST: /postal
-      entrypoint: |
-        bash -c '
-        echo "Waiting for RabbitMQ..."
-        while ! nc -z postal-rabbitmq-xko0wc0kg0c44ggg88cg0ck4 5672; do 
-          echo "Still waiting for RabbitMQ..."; 
-          sleep 1; 
-        done
-        
-        echo "Waiting for MariaDB..."
-        while ! nc -z maria-db-server-kgws4w40k48ogswo80gsoos0 3306; do 
-          echo "Still waiting for MariaDB..."; 
-          sleep 1; 
-        done
-        
-        echo "Running database initialization..."
-        if [ -f /config/postal.yml ]; then
-          echo "INFO: Found /config/postal.yml. Settings from this file will take precedence."
-        else
-          echo "INFO: No /config/postal.yml found. Using environment variables."
-        fi
-        
-        postal initialize || exit 1 # Ensure initialization happens
-        echo "Starting web server..."
-        exec postal web-server' # Use exec and no --bind flags here
+    entrypoint: |
+      bash -c '
+      set -ex # Exit on error, print commands for debugging
+
+      echo "SCRIPT: Starting entrypoint script..."
+
+      echo "SCRIPT: Waiting for RabbitMQ (postal-rabbitmq-xko0wc0kg0c44ggg88cg0ck4:5672)..."
+      while ! nc -z postal-rabbitmq-xko0wc0kg0c44ggg88cg0ck4 5672; do
+        echo "SCRIPT: Still waiting for RabbitMQ...";
+        sleep 1;
+      done
+      echo "SCRIPT: RabbitMQ is up."
+
+      echo "SCRIPT: Waiting for MariaDB (maria-db-server-kgws4w40k48ogswo80gsoos0:3306)..."
+      while ! nc -z maria-db-server-kgws4w40k48ogswo80gsoos0 3306; do
+        echo "SCRIPT: Still waiting for MariaDB...";
+        sleep 1;
+      done
+      echo "SCRIPT: MariaDB is up."
+
+      echo "SCRIPT: Checking for /config/postal.yml..."
+      if [ -f /config/postal.yml ]; then
+        echo "SCRIPT: INFO: Found /config/postal.yml. Settings from this file will take precedence."
+        echo "SCRIPT: --- Begin /config/postal.yml content ---"
+        cat /config/postal.yml # Print the config file content to logs
+        echo "SCRIPT: --- End /config/postal.yml content ---"
+      else
+        echo "SCRIPT: INFO: No /config/postal.yml found. Using environment variables."
+      fi
+
+      echo "SCRIPT: Attempting to run postal initialize..."
+      postal initialize
+      INITIALIZE_EXIT_CODE=$? # Capture the exit code
+      echo "SCRIPT: postal initialize finished with exit code $INITIALIZE_EXIT_CODE."
+
+      if [ $INITIALIZE_EXIT_CODE -ne 0 ]; then
+        echo "SCRIPT: ERROR: postal initialize failed with exit code $INITIALIZE_EXIT_CODE. Exiting."
+        exit 1
+      fi
+
+      echo "SCRIPT: Attempting to start web server with: exec postal web-server"
+      # The "exec" command replaces the current shell process with the postal web-server process.
+      # If this works, you should see Puma startup messages after this line.
+      exec postal web-server
+      
+      # The lines below should NOT be reached if "exec postal web-server" is successful.
+      echo "SCRIPT: ERROR: exec postal web-server seems to have exited or failed to launch. This should not happen."
+      exit 1 
+      '
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000"]
       interval: 30s
