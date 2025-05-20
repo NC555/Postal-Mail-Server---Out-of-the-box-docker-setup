@@ -13,42 +13,26 @@ services:
       - '587:587'
       - '5000:5000'
     volumes:
-      # If /data/postal/postal.yml exists and is configured, it will override ENV vars for DB etc.
-      # Ensure it's correctly configured or remove this line to rely solely on ENV vars.
+
       - /data/postal/postal.yml:/config/postal.yml
-      - postal_data:/opt/postal/storage # For persistent mail data
+      - postal_data:/opt/postal/storage 
     environment:
       # General Postal Settings
-      POSTAL_WEB_HOSTNAME: ${POSTAL_DOMAIN} # Official name
+      POSTAL_WEB_HOSTNAME: ${POSTAL_DOMAIN} 
       POSTAL_WEB_PROTOCOL: https
-      POSTAL_SMTP_HOSTNAME: ${POSTAL_DOMAIN} # Official name
-      # POSTAL_SYSTEM_HOSTNAME: ${POSTAL_DOMAIN} # This was used before, POSTAL_WEB_HOSTNAME and POSTAL_SMTP_HOSTNAME are more specific from the list.
-                                                # Postal's internal scripts might use one to derive others if not all are set.
-                                                # Keeping POSTAL_WEB_HOSTNAME and POSTAL_SMTP_HOSTNAME as per official list.
-
-      # Database Connection - Using official MAIN_DB_* prefixes
+      POSTAL_SMTP_HOSTNAME: ${POSTAL_DOMAIN} 
       MAIN_DB_HOST: ${MARIADB_CONTAINER}
-      MAIN_DB_PORT: ${MARIADB_PORT} # CRITICAL: Ensure this is 3306 in your .env file
+      MAIN_DB_PORT: ${MARIADB_PORT} 
       MAIN_DB_DATABASE: postal
       MAIN_DB_USERNAME: ${MARIADB_USER}
       MAIN_DB_PASSWORD: ${MARIADB_PASSWORD}
-      # MAIN_DB_POOL_SIZE: 5 # Optional: as per official list default
-      # MAIN_DB_ENCODING: utf8mb4 # Optional: as per official list default
-
-      # RabbitMQ Connection (Assuming these POSTAL_ prefixed vars are handled by Postal's image scripts)
-      # The official list doesn't explicitly state how Postal consumes these for its connection TO RabbitMQ.
-      # If issues persist, these might need to be mapped to different underlying library variables if Postal doesn't translate them.
       POSTAL_RABBITMQ_HOST: postal-rabbitmq
-      POSTAL_RABBITMQ_USERNAME: ${RABBITMQ_USER} # Note: RabbitMQ service uses RABBITMQ_DEFAULT_USER
-      POSTAL_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD} # Note: RabbitMQ service uses RABBITMQ_DEFAULT_PASS
+      POSTAL_RABBITMQ_USERNAME: ${RABBITMQ_USER} 
+      POSTAL_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD} 
       POSTAL_RABBITMQ_VHOST: /postal
-
-      # Rails Secret Key
       RAILS_SECRET_KEY: ${RANDOM_STRING} # Official name
-
-      # Other settings from your previous compose (review if needed against official list)
-      POSTAL_SMTP_PORT: 25 # This refers to the port Postal's SMTP server listens on, not an outbound SMTP relay.
-                           # Official list has SMTP_SERVER_DEFAULT_PORT which defaults to 25.
+      POSTAL_SMTP_PORT: 25 
+                      
 
     entrypoint: |
       bash -c '
@@ -79,7 +63,7 @@ services:
     restart: always
     networks:
       - coolify
-    volumes: # Worker might also benefit from postal.yml if it needs shared config
+    volumes:
       - /data/postal/postal.yml:/config/postal.yml
     environment:
       # General Postal Settings
@@ -87,9 +71,8 @@ services:
       POSTAL_WEB_PROTOCOL: https
       POSTAL_SMTP_HOSTNAME: ${POSTAL_DOMAIN}
 
-      # Database Connection - Using official MAIN_DB_* prefixes
       MAIN_DB_HOST: ${MARIADB_CONTAINER}
-      MAIN_DB_PORT: ${MARIADB_PORT} # CRITICAL: Ensure this is 3306 in your .env file
+      MAIN_DB_PORT: ${MARIADB_PORT} 
       MAIN_DB_DATABASE: postal
       MAIN_DB_USERNAME: ${MARIADB_USER}
       MAIN_DB_PASSWORD: ${MARIADB_PASSWORD}
