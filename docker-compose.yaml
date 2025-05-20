@@ -27,30 +27,30 @@ services:
       POSTAL_RABBITMQ_USERNAME: admin
       POSTAL_RABBITMQ_PASSWORD: 'UN!CHRoogLYGmyv9iRJ!eRmtF*uQ78'
       POSTAL_RABBITMQ_VHOST: /postal
-    entrypoint: |
-      bash -c '
-      echo "Waiting for RabbitMQ..."
-      while ! nc -z postal-rabbitmq-xko0wc0kg0c44ggg88cg0ck4 5672; do 
-        echo "Waiting for RabbitMQ..."; 
-        sleep 1; 
-      done
-      
-      echo "Waiting for MariaDB..."
-      while ! nc -z maria-db-server-kgws4w40k48ogswo80gsoos0 3306; do 
-        echo "Waiting for MariaDB..."; 
-        sleep 1; 
-      done
-      
-      echo "Running database initialization..."
-      if [ -f /config/postal.yml ]; then
-        echo "INFO: Found /config/postal.yml. Settings from this file will take precedence."
-      else
-        echo "INFO: No /config/postal.yml found. Using environment variables."
-      fi
-      
-      postal initialize || exit 1
-      echo "Starting web server..."
-      exec postal web-server --bind=tcp://0.0.0.0:5000'
+      entrypoint: |
+        bash -c '
+        echo "Waiting for RabbitMQ..."
+        while ! nc -z postal-rabbitmq-xko0wc0kg0c44ggg88cg0ck4 5672; do 
+          echo "Still waiting for RabbitMQ..."; 
+          sleep 1; 
+        done
+        
+        echo "Waiting for MariaDB..."
+        while ! nc -z maria-db-server-kgws4w40k48ogswo80gsoos0 3306; do 
+          echo "Still waiting for MariaDB..."; 
+          sleep 1; 
+        done
+        
+        echo "Running database initialization..."
+        if [ -f /config/postal.yml ]; then
+          echo "INFO: Found /config/postal.yml. Settings from this file will take precedence."
+        else
+          echo "INFO: No /config/postal.yml found. Using environment variables."
+        fi
+        
+        postal initialize || exit 1 # Ensure initialization happens
+        echo "Starting web server..."
+        exec postal web-server' # Use exec and no --bind flags here
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000"]
       interval: 30s
