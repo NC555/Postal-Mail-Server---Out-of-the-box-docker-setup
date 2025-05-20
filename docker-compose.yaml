@@ -50,7 +50,7 @@ services:
       
       postal initialize || exit 1
       echo "Starting web server..."
-      postal web-server --bind-address=0.0.0.0'
+      exec postal web-server --bind=tcp://0.0.0.0:5000'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000"]
       interval: 30s
