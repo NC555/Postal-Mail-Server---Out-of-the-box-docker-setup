@@ -18,19 +18,19 @@ services:
       - postal_data:/opt/postal/storage 
     environment:
       # General Postal Settings
-      POSTAL_WEB_HOSTNAME: ${POSTAL_DOMAIN} 
+      POSTAL_WEB_HOSTNAME: ${POSTAL_WEB_HOSTNAME} 
       POSTAL_WEB_PROTOCOL: https
-      POSTAL_SMTP_HOSTNAME: ${POSTAL_DOMAIN} 
-      MAIN_DB_HOST: ${MARIADB_CONTAINER}
-      MAIN_DB_PORT: ${MARIADB_PORT} 
+      POSTAL_SMTP_HOSTNAME: ${POSTAL_SMTP_HOSTNAME} 
+      MAIN_DB_HOST: ${MAIN_DB_HOST}
+      MAIN_DB_PORT: ${MAIN_DB_PORT} 
       MAIN_DB_DATABASE: postal
-      MAIN_DB_USERNAME: ${MARIADB_USER}
-      MAIN_DB_PASSWORD: ${MARIADB_PASSWORD}
+      MAIN_DB_USERNAME: ${MAIN_DB_USERNAME}
+      MAIN_DB_PASSWORD: ${MAIN_DB_PASSWORD}
       POSTAL_RABBITMQ_HOST: postal-rabbitmq
-      POSTAL_RABBITMQ_USERNAME: ${RABBITMQ_USER} 
-      POSTAL_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD} 
+      POSTAL_RABBITMQ_USERNAME: ${POSTAL_RABBITMQ_USERNAME} 
+      POSTAL_RABBITMQ_PASSWORD: ${POSTAL_RABBITMQ_PASSWORD} 
       POSTAL_RABBITMQ_VHOST: /postal
-      RAILS_SECRET_KEY: ${RANDOM_STRING} 
+      RAILS_SECRET_KEY: ${RAILS_SECRET_KEY} 
       POSTAL_SMTP_PORT: 25 
                       
 
@@ -67,24 +67,24 @@ services:
       - /data/postal/postal.yml:/config/postal.yml
     environment:
       # General Postal Settings
-      POSTAL_WEB_HOSTNAME: ${POSTAL_DOMAIN}
+      POSTAL_WEB_HOSTNAME: ${POSTAL_WEB_HOSTNAME}
       POSTAL_WEB_PROTOCOL: https
-      POSTAL_SMTP_HOSTNAME: ${POSTAL_DOMAIN}
+      POSTAL_SMTP_HOSTNAME: ${POSTAL_SMTP_HOSTNAME}
 
-      MAIN_DB_HOST: ${MARIADB_CONTAINER}
-      MAIN_DB_PORT: ${MARIADB_PORT} 
+      MAIN_DB_HOST: ${MAIN_DB_HOST}
+      MAIN_DB_PORT: ${MAIN_DB_PORT} 
       MAIN_DB_DATABASE: postal
-      MAIN_DB_USERNAME: ${MARIADB_USER}
-      MAIN_DB_PASSWORD: ${MARIADB_PASSWORD}
+      MAIN_DB_USERNAME: ${MAIN_DB_USERNAME}
+      MAIN_DB_PASSWORD: ${MAIN_DB_PASSWORD}
 
       # RabbitMQ Connection
       POSTAL_RABBITMQ_HOST: postal-rabbitmq
-      POSTAL_RABBITMQ_USERNAME: ${RABBITMQ_USER}
-      POSTAL_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      POSTAL_RABBITMQ_USERNAME: ${POSTAL_RABBITMQ_USERNAME}
+      POSTAL_RABBITMQ_PASSWORD: ${POSTAL_RABBITMQ_PASSWORD}
       POSTAL_RABBITMQ_VHOST: /postal
 
       # Rails Secret Key
-      RAILS_SECRET_KEY: ${RANDOM_STRING}
+      RAILS_SECRET_KEY: ${RAILS_SECRET_KEY}
 
       POSTAL_SMTP_PORT: 25
 
@@ -115,8 +115,8 @@ services:
     volumes:
       - postal_rabbitmq_data:/var/lib/rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER} # Use the var from .env
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD} # Use the var from .env
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER} # Use the var from .env
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS} # Use the var from .env
       RABBITMQ_DEFAULT_VHOST: /postal # Postal expects this vhost
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
